@@ -1,330 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Hybrid Signal — Premium streetwear built for movement, focus, and presence." />
-  <title>Hybrid Signal | Premium Streetwear</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+npx create-next-app@latest shades-on-entertainment --typescript --tailwind --eslint
+cd shades-on-entertainment
+npm install @supabase/supabase-js lucide-react framer-motion clsx tailwind-merge
+-- Create the portfolio table
+CREATE TABLE portfolio_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL,
+  media_url TEXT NOT NULL,
+  media_type TEXT CHECK (media_type IN ('image', 'video')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', sans-serif; }
+-- Enable RLS
+ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY;
 
-    .glass {
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
+-- Policy: Anyone can read
+CREATE POLICY "Public read" ON portfolio_items FOR SELECT USING (true);
+-- Policy: Only authenticated (you) can write
+CREATE POLICY "Admin write" ON portfolio_items FOR ALL TO authenticated USING (true);
+'use client';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-    .hero-overlay {
-      background: linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.75));
-    }
+const categories = ['All', 'Traveling', 'Lifestyle', 'Motivational', 'Client Work'];
 
-    .section-fade {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: all 0.7s ease;
-    }
+export default function Portfolio() {
+  const [active, setActive] = useState('All');
 
-    .section-fade.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .product-card:hover img {
-      transform: scale(1.03);
-    }
-
-    .product-card img {
-      transition: transform 0.45s ease;
-    }
-  </style>
-</head>
-<body class="bg-black text-white selection:bg-white selection:text-black">
-  <!-- NAV -->
-  <header class="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
-    <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-      <a href="#" class="flex items-center gap-3">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-sm font-bold tracking-[0.25em]">HS</div>
-        <div>
-          <div class="text-lg font-semibold tracking-[0.2em] uppercase">Hybrid Signal</div>
-          <div class="text-[11px] uppercase tracking-[0.28em] text-white/45">Luxury Streetwear</div>
-        </div>
-      </a>
-
-      <nav class="hidden items-center gap-8 text-sm font-medium text-white/80 md:flex">
-        <a href="#home" class="hover:text-white">Home</a>
-        <a href="#shop" class="hover:text-white">Shop</a>
-        <a href="#story" class="hover:text-white">Story</a>
-        <a href="#featured" class="hover:text-white">Featured</a>
-        <a href="#contact" class="hover:text-white">Contact</a>
-      </nav>
-
-      <div class="hidden items-center gap-3 md:flex">
-        <button class="rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white/80 hover:border-white/40 hover:text-white">Search</button>
-        <button class="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-white/85">Cart (0)</button>
+  return (
+    <div className="bg-charcoal min-h-screen text-white p-10">
+      <div className="flex gap-4 mb-10 overflow-x-auto">
+        {categories.map(cat => (
+          <button 
+            key={cat}
+            onClick={() => setActive(cat)}
+            className={`px-4 py-2 border rounded-full ${active === cat ? 'bg-teal-500 border-teal-500' : 'border-white'}`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
-
-      <button id="mobileToggle" class="md:hidden">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      
+      <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Map your Supabase data here */}
+      </motion.div>
     </div>
+  );
+}
+'use client';
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-    <div id="mobileMenu" class="hidden border-t border-white/10 px-6 py-5 md:hidden">
-      <div class="flex flex-col gap-4 text-sm text-white/80">
-        <a href="#home">Home</a>
-        <a href="#shop">Shop</a>
-        <a href="#story">Story</a>
-        <a href="#featured">Featured</a>
-        <a href="#contact">Contact</a>
-      </div>
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+export default function Admin() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session));
+  }, []);
+
+  if (!user) return <p>Please login to access this area.</p>;
+
+  return (
+    <div className="p-10 bg-black text-white">
+      <h1>Admin Dashboard</h1>
+      {/* Add your upload form here using supabase.storage.from('media').upload() */}
     </div>
-  </header>
-
-  <!-- HERO -->
-  <section id="home" class="relative min-h-screen overflow-hidden">
-    <img
-      src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1800&q=80"
-      alt="Hybrid Signal hero"
-      class="absolute inset-0 h-full w-full object-cover"
-    />
-    <div class="hero-overlay absolute inset-0"></div>
-
-    <div class="relative mx-auto flex min-h-screen max-w-7xl items-center px-6 py-24">
-      <div class="max-w-3xl">
-        <div class="mb-6 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-          Drop 01 Available Now
-        </div>
-        <h1 class="text-5xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-6xl md:text-8xl">
-          Built for
-          <span class="block text-white/60">Presence.</span>
-        </h1>
-        <p class="mt-6 max-w-xl text-lg leading-8 text-white/72 sm:text-xl">
-          Hybrid Signal delivers premium streetwear with a sharp, elevated identity — made for movement, confidence, and everyday impact.
-        </p>
-        <div class="mt-10 flex flex-wrap gap-4">
-          <a href="#shop" class="rounded-full bg-white px-8 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-black hover:bg-white/85">Shop Collection</a>
-          <a href="#featured" class="rounded-full border border-white/20 px-8 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white hover:border-white/50">View Lookbook</a>
-        </div>
-
-        <div class="mt-14 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-          <div class="glass rounded-3xl p-5">
-            <div class="text-3xl font-bold">Premium</div>
-            <div class="mt-2 text-sm uppercase tracking-[0.2em] text-white/55">Fabric Feel</div>
-          </div>
-          <div class="glass rounded-3xl p-5">
-            <div class="text-3xl font-bold">Limited</div>
-            <div class="mt-2 text-sm uppercase tracking-[0.2em] text-white/55">Release Energy</div>
-          </div>
-          <div class="glass rounded-3xl p-5">
-            <div class="text-3xl font-bold">Refined</div>
-            <div class="mt-2 text-sm uppercase tracking-[0.2em] text-white/55">Brand Identity</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FEATURE BAR -->
-  <section class="border-y border-white/10 bg-zinc-950">
-    <div class="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-6 text-center text-sm uppercase tracking-[0.18em] text-white/60 sm:grid-cols-3">
-      <div>Luxury streetwear aesthetic</div>
-      <div>Designed for Shopify conversion</div>
-      <div>Made to stand out instantly</div>
-    </div>
-  </section>
-
-  <!-- SHOP -->
-  <section id="shop" class="section-fade mx-auto max-w-7xl px-6 py-24">
-    <div class="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-      <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-white/45">Shop the Collection</p>
-        <h2 class="mt-3 text-4xl font-bold uppercase tracking-tight sm:text-5xl">Best Sellers</h2>
-      </div>
-      <a href="#" class="text-sm font-semibold uppercase tracking-[0.18em] text-white/70 hover:text-white">View all products</a>
-    </div>
-
-    <div class="grid gap-8 md:grid-cols-3">
-      <article class="product-card overflow-hidden rounded-[28px] border border-white/10 bg-zinc-900">
-        <div class="overflow-hidden">
-          <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80" alt="Premium tee" class="h-[420px] w-full object-cover" />
-        </div>
-        <div class="p-6">
-          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Signature Tee</div>
-          <h3 class="text-2xl font-semibold">Men’s Premium Heavyweight Tee</h3>
-          <p class="mt-3 text-sm leading-7 text-white/65">Clean structure, luxury feel, and a strong silhouette designed to elevate everyday wear.</p>
-          <div class="mt-5 flex items-center justify-between">
-            <span class="text-lg font-semibold">$48</span>
-            <button class="rounded-full bg-white px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-black">Add to cart</button>
-          </div>
-        </div>
-      </article>
-
-      <article class="product-card overflow-hidden rounded-[28px] border border-white/10 bg-zinc-900">
-        <div class="overflow-hidden">
-          <img src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80" alt="Oversized hoodie" class="h-[420px] w-full object-cover" />
-        </div>
-        <div class="p-6">
-          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Outerwear</div>
-          <h3 class="text-2xl font-semibold">Oversized Statement Hoodie</h3>
-          <p class="mt-3 text-sm leading-7 text-white/65">Relaxed, bold, and premium — built for layering and effortless streetwear presence.</p>
-          <div class="mt-5 flex items-center justify-between">
-            <span class="text-lg font-semibold">$72</span>
-            <button class="rounded-full bg-white px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-black">Add to cart</button>
-          </div>
-        </div>
-      </article>
-
-      <article class="product-card overflow-hidden rounded-[28px] border border-white/10 bg-zinc-900">
-        <div class="overflow-hidden">
-          <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80" alt="Women crop hoodie" class="h-[420px] w-full object-cover" />
-        </div>
-        <div class="p-6">
-          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Women’s Edit</div>
-          <h3 class="text-2xl font-semibold">Women’s Crop Hoodie</h3>
-          <p class="mt-3 text-sm leading-7 text-white/65">Modern, sharp, and flattering with a premium finish that turns a staple into a statement.</p>
-          <div class="mt-5 flex items-center justify-between">
-            <span class="text-lg font-semibold">$64</span>
-            <button class="rounded-full bg-white px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-black">Add to cart</button>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- STORY -->
-  <section id="story" class="section-fade bg-zinc-950 py-24">
-    <div class="mx-auto grid max-w-7xl gap-12 px-6 md:grid-cols-2 md:items-center">
-      <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-white/45">The Brand</p>
-        <h2 class="mt-4 text-4xl font-bold uppercase tracking-tight sm:text-5xl">Hybrid Signal is where luxury meets edge.</h2>
-        <p class="mt-6 max-w-xl text-base leading-8 text-white/70">
-          This brand is designed for people who want their style to communicate confidence before they ever say a word. Every piece is meant to feel premium, look intentional, and carry a presence that separates it from ordinary basics.
-        </p>
-        <div class="mt-8 grid gap-4 sm:grid-cols-2">
-          <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div class="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Identity</div>
-            <div class="mt-2 text-lg font-medium">Sharp, clean, memorable</div>
-          </div>
-          <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div class="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Direction</div>
-            <div class="mt-2 text-lg font-medium">Luxury, modern, powerful</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-5">
-        <div class="overflow-hidden rounded-[28px]">
-          <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80" alt="Streetwear model" class="h-full w-full object-cover" />
-        </div>
-        <div class="mt-12 overflow-hidden rounded-[28px]">
-          <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80" alt="Streetwear portrait" class="h-full w-full object-cover" />
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FEATURED -->
-  <section id="featured" class="section-fade mx-auto max-w-7xl px-6 py-24">
-    <div class="mb-12 text-center">
-      <p class="text-sm font-semibold uppercase tracking-[0.24em] text-white/45">Featured Visual Direction</p>
-      <h2 class="mt-3 text-4xl font-bold uppercase tracking-tight sm:text-5xl">A homepage built to feel expensive.</h2>
-    </div>
-
-    <div class="grid gap-8 md:grid-cols-3">
-      <div class="rounded-[28px] border border-white/10 bg-zinc-900 p-8">
-        <div class="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-white/45">Hero Section</div>
-        <h3 class="text-2xl font-semibold">Strong first impression</h3>
-        <p class="mt-4 text-sm leading-7 text-white/65">Full-screen visual, bold headline, and direct shopping CTA to immediately push visitors deeper into the store.</p>
-      </div>
-      <div class="rounded-[28px] border border-white/10 bg-zinc-900 p-8">
-        <div class="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-white/45">Product Focus</div>
-        <h3 class="text-2xl font-semibold">Clean conversion path</h3>
-        <p class="mt-4 text-sm leading-7 text-white/65">Best-selling products are shown early with premium visuals, concise copy, and easy calls to action.</p>
-      </div>
-      <div class="rounded-[28px] border border-white/10 bg-zinc-900 p-8">
-        <div class="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-white/45">Brand Story</div>
-        <h3 class="text-2xl font-semibold">Identity before discounting</h3>
-        <p class="mt-4 text-sm leading-7 text-white/65">The site sells the feeling of the brand first, which helps the collection feel more premium and less generic.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- EMAIL CTA -->
-  <section class="mx-auto max-w-7xl px-6 pb-24">
-    <div class="rounded-[32px] border border-white/10 bg-white px-8 py-14 text-black md:px-14">
-      <div class="grid gap-8 md:grid-cols-[1.25fr_0.75fr] md:items-center">
-        <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.24em] text-black/50">Stay Connected</p>
-          <h2 class="mt-3 text-4xl font-bold uppercase tracking-tight">Get first access to future drops.</h2>
-          <p class="mt-4 max-w-2xl text-base leading-8 text-black/70">Build your list early and make the brand feel exclusive from the start.</p>
-        </div>
-        <form class="flex flex-col gap-3 sm:flex-row">
-          <input type="email" placeholder="Enter your email" class="min-h-[56px] flex-1 rounded-full border border-black/15 px-6 outline-none" />
-          <button type="button" class="min-h-[56px] rounded-full bg-black px-8 text-sm font-semibold uppercase tracking-[0.18em] text-white">Join</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONTACT -->
-  <footer id="contact" class="border-t border-white/10 bg-black">
-    <div class="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-3">
-      <div>
-        <div class="text-lg font-semibold uppercase tracking-[0.2em]">Hybrid Signal</div>
-        <p class="mt-4 max-w-sm text-sm leading-7 text-white/60">Premium clothing for a modern audience that wants luxury presentation and bold everyday style.</p>
-      </div>
-      <div>
-        <div class="text-sm font-semibold uppercase tracking-[0.24em] text-white/45">Navigation</div>
-        <div class="mt-4 flex flex-col gap-3 text-sm text-white/70">
-          <a href="#home">Home</a>
-          <a href="#shop">Shop</a>
-          <a href="#story">Story</a>
-          <a href="#featured">Featured</a>
-        </div>
-      </div>
-      <div>
-        <div class="text-sm font-semibold uppercase tracking-[0.24em] text-white/45">Contact</div>
-        <div class="mt-4 space-y-3 text-sm text-white/70">
-          <p>support@hybridsignal.com</p>
-          <p>Instagram: @hybridsignal</p>
-          <p>TikTok: @hybridsignal</p>
-        </div>
-      </div>
-    </div>
-    <div class="border-t border-white/10 px-6 py-5 text-center text-xs uppercase tracking-[0.18em] text-white/40">
-      © 2026 Hybrid Signal. All rights reserved.
-    </div>
-  </footer>
-
-  <script>
-    const mobileToggle = document.getElementById('mobileToggle');
-    const mobileMenu = document.getElementById('mobileMenu');
-
-    mobileToggle?.addEventListener('click', () => {
-      mobileMenu.classList.toggle('hidden');
-    });
-
-    document.querySelectorAll('a[href^="#"]').forEach(link => {
-      link.addEventListener('click', () => {
-        mobileMenu.classList.add('hidden');
-      });
-    });
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('show');
-        }
-      });
-    }, { threshold: 0.15 });
-
-    document.querySelectorAll('.section-fade').forEach(section => observer.observe(section));
-  </script>
-</body>
-</html>
+  );
+}
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
